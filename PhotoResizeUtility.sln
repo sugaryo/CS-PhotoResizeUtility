@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoResizer", "PhotoResize
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoResizerConsole", "PhotoResizerConsole\PhotoResizerConsole.csproj", "{0E9846D6-EAEF-48FE-B009-500A965E0BE3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoResizerTest", "PhotoResizerTest\PhotoResizerTest.csproj", "{7DE581D8-9938-47E0-B556-343FC1EF29D5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{0E9846D6-EAEF-48FE-B009-500A965E0BE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E9846D6-EAEF-48FE-B009-500A965E0BE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E9846D6-EAEF-48FE-B009-500A965E0BE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7DE581D8-9938-47E0-B556-343FC1EF29D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7DE581D8-9938-47E0-B556-343FC1EF29D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7DE581D8-9938-47E0-B556-343FC1EF29D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7DE581D8-9938-47E0-B556-343FC1EF29D5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
