@@ -36,11 +36,15 @@ namespace PhotoResizerConsole
 		{
 			PhotoResizer.Resizer resizer = new PhotoResizer.Resizer()
 			{
-				OutputPath		= @"/save",
-				Mode			= System.Drawing.Drawing2D.InterpolationMode.Bicubic,
-				UnitSize		= 4,
-				OverWrite		= true,
-				ModeExtension	= true,
+				OutputPath      = @"/save",
+				Mode            = System.Drawing.Drawing2D.InterpolationMode.Bicubic,
+				UnitSize        = 4,
+				OverWrite       = true,
+				ModeExtension   = true,
+
+
+				MinimumSize = new System.Drawing.Size( 256, 256 ),
+				MaximumSize = new System.Drawing.Size( 4096, 4096 ),
 			};
 
 

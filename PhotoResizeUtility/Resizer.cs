@@ -18,9 +18,13 @@ namespace PhotoResizer
 		public enum NoticeType
 		{
 			Ignore,
+
 			Skiped,
+
 			Collision,
+
 			Resized,
+			Canceled,
 		}
 
 
@@ -68,7 +72,12 @@ namespace PhotoResizer
 					log( "skiped", src?.FullName );
 					break;
 
+				case NoticeType.Canceled:
+					log( "cancel", src?.FullName );
+					break;
+
 				default:
+					log( notice.ToString(), src?.FullName + "  " + dst?.FullName );
 					break;
 			}
 		}
@@ -79,6 +88,10 @@ namespace PhotoResizer
 		public Mode Mode { get; set; } = Mode.HighQualityBicubic;
 
 		public int UnitSize { get; set; } = 4;
+
+		public Size? MinimumSize { get; set; } = null;
+
+		public Size? MaximumSize { get; set; } = null;
 
 		#endregion
 
@@ -146,6 +159,7 @@ namespace PhotoResizer
 			string path = this.AsSavePath( file );
 			FileInfo save = new FileInfo( path );
 
+
 			// 同一パスになった場合は衝突エラー。
 			if ( file.FullName == save.FullName )
 			{
@@ -159,11 +173,16 @@ namespace PhotoResizer
 				this.notice( NoticeType.Skiped, file, null );
 				return;
 			}
-
-
-			this.DoResize( file, save, scale );
-
-			this.notice( NoticeType.Resized, file, save );
+			
+			bool resized = this.DoResize( file, save, scale );
+			if ( resized )
+			{
+				this.notice( NoticeType.Resized, file, save );
+			}
+			else
+			{
+				this.notice( NoticeType.Canceled, file, save );
+			}
 		}
 		
 		private static bool IsScaledExtensionFile( FileInfo file )
@@ -181,14 +200,18 @@ namespace PhotoResizer
 
 
 		// リサイズのメイン処理
-		private void DoResize( FileInfo file, FileInfo save, double scale )
+		private bool DoResize( FileInfo file, FileInfo save, double scale )
 		{
 			// 画像のリサイズ処理を行い、出力先パスに png ファイルを保存する。
 			using ( Bitmap bmp = new Bitmap( file.FullName ) )
 			{
-				int u = this.UnitSize;
-				int w = bmp.Width.scale( scale ).unit( u );
-				int h = bmp.Height.scale( scale ).unit( u );
+				int w = bmp.Width.scale( scale ).unit( this.UnitSize );
+				int h = bmp.Height.scale( scale ).unit( this.UnitSize );
+
+
+#warning 強制的にスキップにしないで、同一ファイルの単純コピーにしても良いかも？（オプション追加検討）
+				if ( !this.IsResizable( bmp.Size, w, h, scale ) ) return false;
+
 
 				using ( Bitmap resized = new Bitmap( w, h ) )
 				{
@@ -199,12 +222,64 @@ namespace PhotoResizer
 					}
 
 					resized.Save( save.FullName, ImageFormat.Png );
+
+					return true;
 				}
 			}
 		}
+		private bool IsResizable( Size org, int w, int h, double scale )
+		{
+			return IsResizable( org, w, h, scale < 1.0 );
+		}
+		private bool IsResizable( Size org, int w, int h, bool sizedown )
+		{
+			// ■同一サイズ判定：
+
+			#region same size check
+
+			// リサイズ後のサイズが同じだった場合は処理しない。
+			// ※ scaleの等倍指定は最初に弾いているが、scaleとunit-size指定によっては等倍化する事もある。
+			if ( org.Width == w && org.Height == h ) return false;
+
+			#endregion
+
+
+			// ■限界サイズ判定：
+
+			#region limited size check
+
+			// 縮小scaleの場合で、且つ最小サイズ指定がある場合：
+			if ( sizedown )
+			{
+				// 幅高さどちらかが指定の最小値を超えている場合はNG
+				if ( null != this.MinimumSize )
+				{
+					Size min = this.MinimumSize.Value;
+
+					if ( w < min.Width ) return false;
+					if ( h < min.Height ) return false;
+				}
+			}
+			// 拡大scaleの場合で、且つ最大サイズ指定がある場合：
+			else
+			{
+				// 幅高さどちらかが指定の最大値を超えている場合はNG
+				if ( null != this.MaximumSize )
+				{
+					Size max = this.MaximumSize.Value;
+
+					if ( max.Width  < w ) return false;
+					if ( max.Height < h ) return false;
+				}
+			}
+
+			#endregion
+
+
+			// 何れのチェックにも引っ掛からない場合はリサイズ可能。
+			return true;
+		}
 		
-
-
 		#region 出力先パスの構築処理
 		
 		private string SaveExtension
