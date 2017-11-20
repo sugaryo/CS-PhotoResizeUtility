@@ -31,6 +31,7 @@ namespace PhotoResizerConsole
 			}
 		}
 		
+		[Obsolete("取り敢えず動作確認レベルで実装、最終的にはargs経由でフォルダパスと動作オプション指定する")]
 		private static void test()
 		{
 			PhotoResizer.Resizer resizer = new PhotoResizer.Resizer()
