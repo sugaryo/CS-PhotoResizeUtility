@@ -42,7 +42,7 @@ namespace PhotoResizer
 		private static void DefaultNoticeAction( NoticeType notice, FileInfo src, FileInfo dst )
 		{
 			// デフォルトのログアクション（標準出力）
-			Action<string, string> log = 
+			Action<string, string> log =
 				(tag, msg)=>
 				{
 					string message = $"- {tag.PadLeft(16)}:\t{msg}";
@@ -67,13 +67,13 @@ namespace PhotoResizer
 				case NoticeType.Skiped:
 					log( "skiped", src?.FullName );
 					break;
-					
+
 				default:
 					break;
 			}
 		}
 		#endregion
-		
+
 		#region リサイズに関する設定
 
 		public Mode Mode { get; set; } = Mode.HighQualityBicubic;
@@ -83,7 +83,7 @@ namespace PhotoResizer
 		#endregion
 
 		#region その他、動作のオプション設定群
-		
+
 		public string OutputPath { get; set; } = null;
 
 		public bool MultipleExtension { get; set; } = true;
@@ -97,20 +97,46 @@ namespace PhotoResizer
 		#endregion
 
 
-
+		#region Resize (facade)
 		public void Resize( IEnumerable<FileInfo> files, double scale )
 		{
+			ValidateScale( scale );
+
 			foreach ( var file in files )
 			{
-				this.Resize( file, scale );
+				this.ResizeCore( file, scale );
 			}
 		}
-		
+
 		public void Resize( FileInfo file, double scale )
+		{
+			ValidateScale( scale );
+
+			this.ResizeCore( file, scale );
+		}
+
+		private static void ValidateScale( double scale )
+		{
+			// ゼロ以下は論外。
+			if ( scale <= 0.0 ) throw new ArgumentException( $"指定したスケール値{scale}が小さすぎます。" );
+
+			// 等倍は意味が無いので無視する。
+			if ( 1.0 == scale ) throw new ArgumentException( $"指定したスケール値{scale}が等倍です。" );
+
+			// 百倍越えは流石に大きすぎるので。
+			const double MAX = 100.0;
+			if ( MAX < scale ) throw new ArgumentException( $"指定したスケール値{scale}が大きすぎます。（最大{MAX}）" );
+		}
+		#endregion
+
+
+		#region Resize 内部処理
+		
+		private void ResizeCore( FileInfo file, double scale )
 		{
 			// ".scaled" 複合拡張子のファイルを無視する設定の場合、拡張子をチェックして無視する。
 			if ( this.IgnoreScaledExtensionFile
-				  && this.IsScaledExtensionFile( file ) )
+				       && IsScaledExtensionFile( file ) )
 			{
 				this.notice( NoticeType.Ignore, file, null );
 				return;
@@ -135,12 +161,12 @@ namespace PhotoResizer
 			}
 
 
-			this.ResizeCore( file, save, scale );
+			this.DoResize( file, save, scale );
 
 			this.notice( NoticeType.Resized, file, save );
 		}
 		
-		private bool IsScaledExtensionFile( FileInfo file )
+		private static bool IsScaledExtensionFile( FileInfo file )
 		{
 			List<string> extensions = file.Name
 				.ToLower()    // ファイル名全体を一旦小文字化。
@@ -151,10 +177,11 @@ namespace PhotoResizer
 			// 複合拡張子の中に scaled が含まれるか否かを判定。
 			return extensions.Contains( "scaled" );
 		}
+		
 
-		#region 画像リサイズのメイン処理
 
-		private void ResizeCore( FileInfo file, FileInfo save, double scale )
+		// リサイズのメイン処理
+		private void DoResize( FileInfo file, FileInfo save, double scale )
 		{
 			// 画像のリサイズ処理を行い、出力先パスに png ファイルを保存する。
 			using ( Bitmap bmp = new Bitmap( file.FullName ) )
@@ -175,9 +202,7 @@ namespace PhotoResizer
 				}
 			}
 		}
-
-		#endregion
-
+		
 
 
 		#region 出力先パスの構築処理
@@ -262,7 +287,6 @@ namespace PhotoResizer
 				: ResizerUtility.MergePath( file.Directory.FullName, this.OutputPath );
 		}
 		
-
 		private string AsSavePath( FileInfo file )
 		{
 			string directory = this.AsSaveFolder( file );
@@ -274,8 +298,10 @@ namespace PhotoResizer
 
 			return Path.Combine( directory, newname );
 		}
+
 		#endregion
 		
-		
+
+		#endregion		
 	}
 }
