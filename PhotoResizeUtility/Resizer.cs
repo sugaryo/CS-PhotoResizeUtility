@@ -167,26 +167,7 @@ namespace PhotoResizer
 				this.notice( NoticeType.Ignore, src, null );
 				return;
 			}
-
-			//// 設定に応じて保存パスを構築。
-			//string path = this.AsSavePath( file );
-			//FileInfo save = new FileInfo( path );
-			//
-			//
-			//// 同一パスになった場合は衝突エラー。
-			//if ( file.FullName == save.FullName )
-			//{
-			//	this.notice( NoticeType.Collision, file, null );
-			//	return;
-			//}
-			//
-			//// 既に同名のファイルが出力先に存在しており、上書きモードがオフの場合はスキップする。
-			//if ( save.Exists && !this.OverWrite )
-			//{
-			//	this.notice( NoticeType.Skiped, file, null );
-			//	return;
-			//}
-
+			
 
 
 			FileInfo dst;
