@@ -29,7 +29,8 @@ namespace PhotoResizer
 			Copy,
 		}
 
-
+		// プロパティ：
+		
 		#region 処理の通知構造
 		// Noticeプロパティのデリゲート型
 		public delegate void NoticeAction( NoticeType notice, FileInfo src, FileInfo dst );
@@ -123,6 +124,8 @@ namespace PhotoResizer
 		#endregion
 
 
+		// メソッド：
+
 		#region Resize (facade)
 		public void Resize( IEnumerable<FileInfo> files, double scale )
 		{
@@ -154,46 +157,29 @@ namespace PhotoResizer
 			if ( MAX < scale ) throw new ArgumentException( $"指定したスケール値{scale}が大きすぎます。（最大{MAX}）" );
 		}
 		#endregion
-
-
+		
 		#region Resize 内部処理
 		
 		private void ResizeCore( FileInfo src, double scale )
 		{
-			// ".scaled" 複合拡張子のファイルを無視する設定の場合、拡張子をチェックして無視する。
-			if ( this.IgnoreScaledExtensionFile
-				       && IsScaledExtensionFile( src ) )
-			{
-				this.notice( NoticeType.Ignore, src, null );
-				return;
-			}
-			
-
-
 			FileInfo dst;
 			NoticeType type = this.DoResize( src, scale, out dst );
 
 			this.notice( type, src, dst );
 			
 		}
-		
-		private static bool IsScaledExtensionFile( FileInfo file )
-		{
-			List<string> extensions = file.Name
-				.ToLower()    // ファイル名全体を一旦小文字化。
-				.split( "." ) // 拡張子を含むファイル名全体をドットで分割。
-				.Skip( 1 )    // 先頭の要素（ファイル名本体）をスキップ。
-				.ToList();    // スキップして残った拡張子（複数）をリスト化。
-
-			// 複合拡張子の中に scaled が含まれるか否かを判定。
-			return extensions.Contains( "scaled" );
-		}
-		
-
-
 		// リサイズのメイン処理
 		private NoticeType DoResize( FileInfo src, double scale, out FileInfo dst )
 		{
+			// ".scaled" 複合拡張子のファイルを無視する設定の場合、拡張子をチェックして無視する。
+			if ( this.IgnoreScaledExtensionFile
+				       && IsScaledExtensionFile( src ) )
+			{
+				dst = null;
+				return NoticeType.Ignore;
+			}
+			
+
 			// 画像のリサイズ処理を行い、出力先パスに png ファイルを保存する。
 			using ( Bitmap bmp = new Bitmap( src.FullName ) )
 			{
@@ -309,6 +295,18 @@ namespace PhotoResizer
 
 			// 何れのチェックにも引っ掛からない場合はリサイズ可能。
 			return true;
+		}
+		
+		private static bool IsScaledExtensionFile( FileInfo file )
+		{
+			List<string> extensions = file.Name
+				.ToLower()    // ファイル名全体を一旦小文字化。
+				.split( "." ) // 拡張子を含むファイル名全体をドットで分割。
+				.Skip( 1 )    // 先頭の要素（ファイル名本体）をスキップ。
+				.ToList();    // スキップして残った拡張子（複数）をリスト化。
+
+			// 複合拡張子の中に scaled が含まれるか否かを判定。
+			return extensions.Contains( "scaled" );
 		}
 		
 
