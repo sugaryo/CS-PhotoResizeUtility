@@ -24,7 +24,9 @@ namespace PhotoResizer
 			Collision,
 
 			Resized,
-			Canceled,
+
+			Cancel,
+			Copy,
 		}
 
 
@@ -56,10 +58,6 @@ namespace PhotoResizer
 			// 通知タイプごとにログ内容を切り替え
 			switch ( notice )
 			{
-				case NoticeType.Resized:
-					log( "resized", src?.FullName + " -> " + dst?.FullName );
-					break;
-
 				case NoticeType.Ignore:
 					log( "ignored", src?.FullName );
 					break;
@@ -72,9 +70,22 @@ namespace PhotoResizer
 					log( "skiped", src?.FullName );
 					break;
 
-				case NoticeType.Canceled:
+
+
+				case NoticeType.Resized:
+					log( "resized", src?.FullName + " -> " + dst?.FullName );
+					break;
+
+
+
+				case NoticeType.Cancel:
 					log( "cancel", src?.FullName );
 					break;
+
+				case NoticeType.Copy:
+					log( "copy", src?.FullName + " -> " + dst?.FullName );
+					break;
+
 
 				default:
 					log( notice.ToString(), src?.FullName + "  " + dst?.FullName );
@@ -92,6 +103,8 @@ namespace PhotoResizer
 		public Size? MinimumSize { get; set; } = null;
 
 		public Size? MaximumSize { get; set; } = null;
+
+		public bool CopyWhenUnresizable { get; set; } = false;
 
 		#endregion
 
@@ -145,44 +158,42 @@ namespace PhotoResizer
 
 		#region Resize 内部処理
 		
-		private void ResizeCore( FileInfo file, double scale )
+		private void ResizeCore( FileInfo src, double scale )
 		{
 			// ".scaled" 複合拡張子のファイルを無視する設定の場合、拡張子をチェックして無視する。
 			if ( this.IgnoreScaledExtensionFile
-				       && IsScaledExtensionFile( file ) )
+				       && IsScaledExtensionFile( src ) )
 			{
-				this.notice( NoticeType.Ignore, file, null );
+				this.notice( NoticeType.Ignore, src, null );
 				return;
 			}
 
-			// 設定に応じて保存パスを構築。
-			string path = this.AsSavePath( file );
-			FileInfo save = new FileInfo( path );
+			//// 設定に応じて保存パスを構築。
+			//string path = this.AsSavePath( file );
+			//FileInfo save = new FileInfo( path );
+			//
+			//
+			//// 同一パスになった場合は衝突エラー。
+			//if ( file.FullName == save.FullName )
+			//{
+			//	this.notice( NoticeType.Collision, file, null );
+			//	return;
+			//}
+			//
+			//// 既に同名のファイルが出力先に存在しており、上書きモードがオフの場合はスキップする。
+			//if ( save.Exists && !this.OverWrite )
+			//{
+			//	this.notice( NoticeType.Skiped, file, null );
+			//	return;
+			//}
 
 
-			// 同一パスになった場合は衝突エラー。
-			if ( file.FullName == save.FullName )
-			{
-				this.notice( NoticeType.Collision, file, null );
-				return;
-			}
 
-			// 既に同名のファイルが出力先に存在しており、上書きモードがオフの場合はスキップする。
-			if ( save.Exists && !this.OverWrite )
-			{
-				this.notice( NoticeType.Skiped, file, null );
-				return;
-			}
+			FileInfo dst;
+			NoticeType type = this.DoResize( src, scale, out dst );
+
+			this.notice( type, src, dst );
 			
-			bool resized = this.DoResize( file, save, scale );
-			if ( resized )
-			{
-				this.notice( NoticeType.Resized, file, save );
-			}
-			else
-			{
-				this.notice( NoticeType.Canceled, file, save );
-			}
 		}
 		
 		private static bool IsScaledExtensionFile( FileInfo file )
@@ -200,30 +211,69 @@ namespace PhotoResizer
 
 
 		// リサイズのメイン処理
-		private bool DoResize( FileInfo file, FileInfo save, double scale )
+		private NoticeType DoResize( FileInfo src, double scale, out FileInfo dst )
 		{
 			// 画像のリサイズ処理を行い、出力先パスに png ファイルを保存する。
-			using ( Bitmap bmp = new Bitmap( file.FullName ) )
+			using ( Bitmap bmp = new Bitmap( src.FullName ) )
 			{
 				int w = bmp.Width.scale( scale ).unit( this.UnitSize );
 				int h = bmp.Height.scale( scale ).unit( this.UnitSize );
 
 
-#warning 強制的にスキップにしないで、同一ファイルの単純コピーにしても良いかも？（オプション追加検討）
-				if ( !this.IsResizable( bmp.Size, w, h, scale ) ) return false;
-
-
-				using ( Bitmap resized = new Bitmap( w, h ) )
+				// リサイズ実行可能な場合：
+				if ( this.IsResizable( bmp.Size, w, h, scale ) )
 				{
-					using ( Graphics g = Graphics.FromImage( resized ) )
+					FileInfo save = dst = this.AsSaveFile( src );
+
+					#region リサイズ処理
+					if ( src.FullName == dst.FullName )
 					{
-						g.InterpolationMode = this.Mode;
-						g.DrawImage( bmp, 0, 0, w, h );
+						return NoticeType.Collision;	
+					}
+					if ( dst.Exists && !this.OverWrite )
+					{
+						return NoticeType.Skiped;
 					}
 
-					resized.Save( save.FullName, ImageFormat.Png );
+					using ( Bitmap resized = new Bitmap( w, h ) )
+					{
+						using ( Graphics g = Graphics.FromImage( resized ) )
+						{
+							g.InterpolationMode = this.Mode;
+							g.DrawImage( bmp, 0, 0, w, h );
+						}
 
-					return true;
+						resized.Save( save.FullName, ImageFormat.Png );
+
+						return NoticeType.Resized;
+					}
+					#endregion
+				}
+				// リサイズ不能で、コピー指定が有効な場合：
+				else if (this.CopyWhenUnresizable)
+				{
+					FileInfo copy = dst = this.AsCopyFile( src );
+
+					#region コピー処理
+					if ( src.FullName == dst.FullName )
+					{
+						return NoticeType.Collision;	
+					}
+					if ( dst.Exists && !this.OverWrite )
+					{
+						return NoticeType.Skiped;
+					}
+
+					File.Copy( src.FullName, copy.FullName, true );
+
+					return NoticeType.Copy;
+					#endregion
+				}
+				// リサイズ不能、且つコピー指定もない場合。
+				else
+				{
+					dst = null;
+					return NoticeType.Cancel;
 				}
 			}
 		}
@@ -280,6 +330,7 @@ namespace PhotoResizer
 			return true;
 		}
 		
+
 		#region 出力先パスの構築処理
 		
 		private string SaveExtension
@@ -361,7 +412,8 @@ namespace PhotoResizer
 				? this.OutputPath
 				: ResizerUtility.MergePath( file.Directory.FullName, this.OutputPath );
 		}
-		
+
+
 		private string AsSavePath( FileInfo file )
 		{
 			string directory = this.AsSaveFolder( file );
@@ -373,6 +425,26 @@ namespace PhotoResizer
 
 			return Path.Combine( directory, newname );
 		}
+		private FileInfo AsSaveFile( FileInfo file )
+		{
+			string path = AsSavePath( file );
+			return new FileInfo( path );
+		}
+
+		private string AsCopyPath( FileInfo file )
+		{
+			string directory = this.AsSaveFolder( file );
+
+			string name = file.Name;
+
+			return Path.Combine( directory, name );
+		}
+		private FileInfo AsCopyFile( FileInfo file )
+		{
+			string path = AsCopyPath( file );
+			return new FileInfo( path );
+		}
+		
 
 		#endregion
 		
