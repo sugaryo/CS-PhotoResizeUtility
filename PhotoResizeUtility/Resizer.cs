@@ -1,61 +1,59 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using System.Drawing;
-
 using Mode = System.Drawing.Drawing2D.InterpolationMode;
-using System.Drawing.Imaging;
-using System.Threading;
 
 namespace PhotoResizer
 {
 	public class Resizer
 	{
-		public enum NoticeType
-		{
-			Ignore,
-
-			Skiped,
-
-			Collision,
-
-			Resized,
-
-			Cancel,
-			Copy,
-		}
-
 		// プロパティ：
-		
-		#region 処理の通知構造
-		// Noticeプロパティのデリゲート型
-		public delegate void NoticeAction( NoticeType notice, FileInfo src, FileInfo dst );
 
-		// Noticeプロパティとバッキングフィールド
-		private NoticeAction notice = DefaultNoticeAction;
-		public NoticeAction Notice
+		#region リサイズに関する設定
+
+		public Mode Mode { get; set; } = Mode.HighQualityBicubic;
+
+		public int UnitSize { get; set; } = 4;
+
+		public Size? MinimumSize { get; set; } = null;
+
+		public Size? MaximumSize { get; set; } = null;
+
+		public bool CopyWhenUnresizable { get; set; } = false;
+
+		#endregion
+
+		#region その他、動作のオプション設定群
+
+		public string OutputPath { get; set; } = null;
+
+		public bool MultipleExtension { get; set; } = true;
+
+		public bool ModeExtension { get; set; } = false;
+
+		public bool OverWrite { get; set; } = false;
+
+		public bool IgnoreScaledExtensionFile { get; set; } = true;
+
+		#endregion
+		
+		#region 処理の通知
+		public NoticeActionHolder Notice { get; set; }
+				= new NoticeActionHolder( NoticeConsole );
+		private static void NoticeConsole( NoticeType notice, FileInfo src, FileInfo dst )
 		{
-			// null 代入の場合は NOP で置き換える。
-			set { this.notice = value ?? NopAction; }
-		}
-		private static void NopAction( NoticeType notice, FileInfo src, FileInfo dst )
-		{
-			// NOP は何もしない。
-		}
-		private static void DefaultNoticeAction( NoticeType notice, FileInfo src, FileInfo dst )
-		{
-			// デフォルトのログアクション（標準出力）
 			Action<string, string> log =
 				(tag, msg)=>
 				{
-					string message = $"- {tag.PadLeft(16)}:\t{msg}";
+					string pad = tag.PadLeft( 16 );
+					string message = $"- {pad}:\t{msg}";
 					Console.WriteLine( message );
 				};
 
+			#region switch ( NoticeType )
 			// 通知タイプごとにログ内容を切り替え
 			switch ( notice )
 			{
@@ -92,35 +90,8 @@ namespace PhotoResizer
 					log( notice.ToString(), src?.FullName + "  " + dst?.FullName );
 					break;
 			}
+			#endregion
 		}
-		#endregion
-
-		#region リサイズに関する設定
-
-		public Mode Mode { get; set; } = Mode.HighQualityBicubic;
-
-		public int UnitSize { get; set; } = 4;
-
-		public Size? MinimumSize { get; set; } = null;
-
-		public Size? MaximumSize { get; set; } = null;
-
-		public bool CopyWhenUnresizable { get; set; } = false;
-
-		#endregion
-
-		#region その他、動作のオプション設定群
-
-		public string OutputPath { get; set; } = null;
-
-		public bool MultipleExtension { get; set; } = true;
-
-		public bool ModeExtension { get; set; } = false;
-
-		public bool OverWrite { get; set; } = false;
-
-		public bool IgnoreScaledExtensionFile { get; set; } = true;
-
 		#endregion
 
 
@@ -165,7 +136,7 @@ namespace PhotoResizer
 			FileInfo dst;
 			NoticeType type = this.DoResize( src, scale, out dst );
 
-			this.notice( type, src, dst );
+			this.Notice.Execute( type, src, dst );
 			
 		}
 		// リサイズのメイン処理
