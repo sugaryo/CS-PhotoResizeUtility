@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,7 +17,14 @@ namespace PhotoResizerConsole
 			// 今は動作確認用のテスト実装
 			try
 			{
-				test();
+				string[] directories = args
+					.AsEnumerable()
+					.Select( x => new DirectoryInfo(x) )
+					.Where( x => x.Exists )
+					.Select( x => x.FullName )
+					.ToArray();
+
+				Resize( directories );
 
 				Console.WriteLine();
 				Console.WriteLine();
@@ -31,8 +39,7 @@ namespace PhotoResizerConsole
 			}
 		}
 		
-		[Obsolete("取り敢えず動作確認レベルで実装、最終的にはargs経由でフォルダパスと動作オプション指定する")]
-		private static void test()
+		private static void Resize(string[] directories)
 		{
 			PhotoResizer.Resizer resizer = new PhotoResizer.Resizer()
 			{
@@ -47,13 +54,9 @@ namespace PhotoResizerConsole
 				MaximumSize = new System.Drawing.Size( 4096, 4096 ),
 			};
 
-
-			string[] paths = {
-				@"C:\photo",
-				@"C:\test",
-			 };
+			
 			var files = ResizerUtility
-					.AsFiles( paths, FolderOption.SearchFilesShallow )
+					.AsFiles( directories, FolderOption.SearchFilesShallow )
 					.ToList();
 
 			int n = files.Count;
