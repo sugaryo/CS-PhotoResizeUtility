@@ -10,13 +10,15 @@ using static PhotoResizer.ResizerUtility;
 namespace PhotoResizerConsole
 {
 	class Program
-	{
-		static void Main( string[] args )
+    {
+        [Obsolete("取り敢えず動作確認レベルで実装、最終的にはargs経由でフォルダパスと動作オプション指定する")]
+        static void Main( string[] args )
 		{
 			// 今は動作確認用のテスト実装
 			try
 			{
-				test();
+#warning 取り敢えずフォルダを直接食わせる形で暫定実装。
+                test(args);
 
 				Console.WriteLine();
 				Console.WriteLine();
@@ -31,12 +33,11 @@ namespace PhotoResizerConsole
             Console.ReadKey(true);
         }
 		
-		[Obsolete("取り敢えず動作確認レベルで実装、最終的にはargs経由でフォルダパスと動作オプション指定する")]
-		private static void test()
+		private static void test(string[] paths)
 		{
 			PhotoResizer.Resizer resizer = new PhotoResizer.Resizer()
 			{
-				OutputPath      = @"/save",
+				OutputPath      = @"/save", // 画像の相対パスで save フォルダを作ってそこに出す。
 				Mode            = System.Drawing.Drawing2D.InterpolationMode.Bicubic,
 				UnitSize        = 4,
 				OverWrite       = true,
@@ -48,10 +49,6 @@ namespace PhotoResizerConsole
 			};
 
 
-			string[] paths = {
-				@"C:\photo",
-				@"C:\test",
-			 };
 			var files = ResizerUtility
 					.AsFiles( paths, FolderOption.SearchFilesShallow )
 					.ToList();
