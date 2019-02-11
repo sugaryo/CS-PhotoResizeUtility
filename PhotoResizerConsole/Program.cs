@@ -21,15 +21,15 @@ namespace PhotoResizerConsole
 				Console.WriteLine();
 				Console.WriteLine();
 				Console.WriteLine();
-				Console.WriteLine( "press any key to exit." );
-				Console.ReadKey( true );
 			}
 			catch ( Exception ex )
 			{
 				Console.WriteLine( ex.Message );
 				Console.WriteLine( ex.StackTrace );
-			}
-		}
+            }
+            Console.WriteLine("press any key to exit.");
+            Console.ReadKey(true);
+        }
 		
 		[Obsolete("取り敢えず動作確認レベルで実装、最終的にはargs経由でフォルダパスと動作オプション指定する")]
 		private static void test()
