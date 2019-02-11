@@ -51,6 +51,12 @@ namespace PhotoResizerConsole
 
 			var files = ResizerUtility
 					.AsFiles( paths, FolderOption.SearchFilesShallow )
+                    .Where( x => {
+                        string ext = x.Extension.ToLower();
+                        return ext == ".png"
+                            || ext == ".jpg"
+                            || ext == ".jpeg";
+                    })
 					.ToList();
 
 			int n = files.Count;
