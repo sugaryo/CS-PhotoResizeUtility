@@ -4,6 +4,8 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Mode = System.Drawing.Drawing2D.InterpolationMode;
 
 namespace PhotoResizer
@@ -48,8 +50,11 @@ namespace PhotoResizer
 			Action<string, string> log =
 				(tag, msg)=>
 				{
+                    string timestamp = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
+                    string thread = Thread.CurrentThread.ManagedThreadId.ToString().PadLeft(3);
+
 					string pad = tag.PadLeft( 16 );
-					string message = $"- {pad}:\t{msg}";
+					string message = $"{timestamp} [{thread}] - {pad}:\t{msg}";
 					Console.WriteLine( message );
 				};
 
@@ -102,13 +107,22 @@ namespace PhotoResizer
 		{
 			ValidateScale( scale );
 
+            List<Task> tasks = new List<Task>();
+
 			foreach ( var file in files )
 			{
-				this.ResizeCore( file, scale );
+                var task = Task.Run(() =>
+                {
+                    this.ResizeCore(file, scale);
+                });
+
+                tasks.Add(task);
 			}
+
+            Task.WhenAll(tasks).Wait();
 		}
 
-		public void Resize( FileInfo file, double scale )
+        public void Resize( FileInfo file, double scale )
 		{
 			ValidateScale( scale );
 
@@ -139,6 +153,9 @@ namespace PhotoResizer
 			this.Notice.Execute( type, src, dst );
 			
 		}
+
+
+
 		// リサイズのメイン処理
 		private NoticeType DoResize( FileInfo src, double scale, out FileInfo dst )
 		{
